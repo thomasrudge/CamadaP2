@@ -29,12 +29,9 @@ serialName = "COM3"                  # Windows(variacao de)  detectar sua porta 
 def main():
     try:
         print("Iniciou o main")
-        #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
-        #para declarar esse objeto é o nome da porta.
+
         com1 = enlace(serialName)
-        
-    
-        # Ativa comunicacao. Inicia os threads e a comunicação seiral 
+
         com1.enable()
 
         time.sleep(.2)
@@ -44,71 +41,41 @@ def main():
         print("mandei")
 
         time.sleep(1)
-        #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
-        print("Abriu a comunicação")
-        
-        
-                  
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
-        
-       ## imageR = "japao.png"
-       # imageW = "copiaRecebida5.png"
 
-       # print("Carregando imagem para transmissao :")
-        #print(" - {}".format(imageR))
-        #print("---------------------")
-        
+        print("Abriu a comunicação")
+
+        pacotes = []
+
+        for i in range(3):
+            pacote - datagrama()
+
         txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
         bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
         com1.sendData(bytesBuffer)
 
-        #for i in range(len(txBuffer)):
-         #   time.sleep(0.05)
-          #  com1.sendData(txBuffer[i])
-        #txBuffer = b'\x12\x13\xAA\x01'  #isso é um array de bytes. apenas um exemplo para teste. Deverá ser substutuido pelo 
-        #array correspondente à imagem
-       
         print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
-        #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
-       
-            
-        #finalmente vamos transmitir os todos. Para isso usamos a funçao sendData que é um método da camada enlace.
-        #faça um print para avisar que a transmissão vai começar.
-        #tente entender como o método send funciona!
-        #Cuidado! Apenas trasmita arrays de bytes!
-        #txBuffer = b'\xAA\x12\xFF'    
+
+
         print("Transmissao vai comecar! ")
-        #com1.sendData(np.asarray(txBuffer))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
-    
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
+
         while com1.tx.threadMutex == True:
             time.sleep(0.01)
-        # O método não deve estar fincionando quando usado como abaixo. deve estar retornando zero. Tente entender como esse método funciona e faça-o funcionar.
+
         txSize = com1.tx.getStatus()
         print('enviou = {}' .format(txSize))
-        
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.]
+
 
 
 
         tempo_antes = time.time()
         print("A recepcao vai comecar! ")
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-        #com1.tx.transLen
-      
-        #acesso aos bytes recebidos
+
+
         txLen = len(txBuffer)
 
         tempo_antes = time.time()
         rxBuffer = 0
-        #time.sleep(5)
-        
+
 
         recebido = False
 
@@ -117,10 +84,6 @@ def main():
             if tam == 4:
                 recebido = True
                 break
-
-        #time.sleep(5)
-
-
 
         if recebido == True:
             rxBuffer, nRx = com1.getData(4)
@@ -131,46 +94,83 @@ def main():
 
         else:
             print("Nao recebi nada")
-                
-            
-        
 
 
-
-        
-
-
-        #print(rxBuffer)
-
-       
-        #print(" - {}".format(imageW))
-        #f = open(imageW , 'wb')
-        #f.write(rxBuffer)
-
-        
-        
-
-        
-        
-        #apenas para teste dos 4 bytes exemplo. NO caso da imagem devera ser retirado para nao poluir...
-    #    for i in range(len(rxBuffer)):
-    #        print("recebeu {}" .format(rxBuffer[i]))
-        
-
-            
-    
-        # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
         com1.disable()
-        
+
     except Exception as erro:
         print("ops! :-\\")
         print(erro)
         com1.disable()
-        
 
-    #so roda o main quando for executado do terminal ... se for chamado dentro de outro modulo nao roda
 if __name__ == "__main__":
     main()
+
+
+class datagrama:
+    def __init__(self, tipo , info_payload , data , eop= b'\xFF\xFF\xFF'):
+
+        self.tipo=tipo                               # Handshake, Resposta do servidor, Mensagem de Dados, ACK (confirmação), Timeout, Erro
+        self.total_pacotes=0                         # Total de pacotes recebidos
+        self.num_pacote=0                            # Número do pacote
+        self.info_payload=info_payload               # Tamanho do payload
+        self.data=data                               # Payload
+        self.eop=eop
+
+        self.h1=0
+        self.h2=0
+        self.h6=0
+        self.h7=0
+        self.h8=0
+        self.h9=0
+        self.h10=0
+        self.h11=0
+
+
+    def monta_header(self):
+
+        header = bytearray(12)
+
+        header[0] = self.tipo
+        header[1] = self.h1
+        header[2] = self.h2
+        header[3] = self.total_pacotes
+        header[4] = self.num_pacote + 1
+        header[5] = self.info_payload
+        header[6] = self.h6
+        header[7] = self.h7
+        header[8] = self.h8
+        header[9] = self.h9
+        header[10] = self.h10
+        header[11] = self.h11
+
+        return bytes(header)
+
+    def monta_datagrama(self):
+        header = self.monta_header()
+        datagrama = header + self.data + self.eop
+        return datagrama
+
+    def verificar_datagrama(self,datagrama, eop_esperado=b'\xFF\xFF\xFF'):
+        if len(datagrama) < 15:
+            return False, "Datagrama muito curto!"
+
+        header = datagrama[:12]
+        eop = datagrama[-3:]
+
+        if eop != eop_esperado:
+            return False, "EOP inválido!"
+
+        if header[5]+15 != len(datagrama):
+            return False
+
+        if self.num_pacote - self.total_pacotes != 1:
+            return False, "Algum pacote foi perdido no meio do caminho"
+        else:
+            self.total_pacotes += 1
+
+        return True, header
+
