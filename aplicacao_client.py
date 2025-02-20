@@ -13,6 +13,7 @@
 from enlace import *
 import time
 import numpy as np
+import struct
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -35,26 +36,41 @@ def main():
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
+
+        time.sleep(.2)
+
+        com1.sendData(b'00')
+
+        print("mandei")
+
+        time.sleep(1)
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
         
-           
+        
                   
         #aqui você deverá gerar os dados a serem transmitidos. 
         #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        imageR = "japao.png"
-        imageW = "copiaRecebida4.png"
+       ## imageR = "japao.png"
+       # imageW = "copiaRecebida5.png"
 
-        print("Carregando imagem para transmissao :")
-        print(" - {}".format(imageR))
-        print("---------------------")
-        txBuffer = open(imageR , 'rb').read()
+       # print("Carregando imagem para transmissao :")
+        #print(" - {}".format(imageR))
+        #print("---------------------")
+        
+        txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
+        bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
+        com1.sendData(bytesBuffer)
+
+        #for i in range(len(txBuffer)):
+         #   time.sleep(0.05)
+          #  com1.sendData(txBuffer[i])
         #txBuffer = b'\x12\x13\xAA\x01'  #isso é um array de bytes. apenas um exemplo para teste. Deverá ser substutuido pelo 
         #array correspondente à imagem
        
-        print("meu array de bytes tem tamanho {}" .format(len(txBuffer)+1))
+        print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
         #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
        
             
@@ -64,7 +80,7 @@ def main():
         #Cuidado! Apenas trasmita arrays de bytes!
         #txBuffer = b'\xAA\x12\xFF'    
         print("Transmissao vai comecar! ")
-        com1.sendData(np.asarray(txBuffer))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
+        #com1.sendData(np.asarray(txBuffer))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
     
         # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
         while com1.tx.threadMutex == True:
@@ -75,7 +91,11 @@ def main():
         
         #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
         #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
+        #print um aviso de que a recepção vai começar.]
+
+
+
+        tempo_antes = time.time()
         print("A recepcao vai comecar! ")
         
         #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
@@ -84,16 +104,50 @@ def main():
       
         #acesso aos bytes recebidos
         txLen = len(txBuffer)
-        rxBuffer, nRx = com1.getData(txLen+1)
-        print("recebeu {} bytes" .format(len(rxBuffer)))
+
+        tempo_antes = time.time()
+        rxBuffer = 0
+        #time.sleep(5)
+        
+
+        recebido = False
+
+        while time.time() - tempo_antes < 5:
+            tam = com1.rx.getBufferLen()
+            if tam == 4:
+                recebido = True
+                break
+
+        #time.sleep(5)
+
+
+
+        if recebido == True:
+            rxBuffer, nRx = com1.getData(4)
+            print("recebeu {} bytes" .format(len(rxBuffer)))
+            rxBuffer = struct.unpack('<f',rxBuffer)[0]
+
+            print(rxBuffer)
+
+        else:
+            print("Nao recebi nada")
+                
+            
+        
+
+
+
+        
+
+
         #print(rxBuffer)
 
-        print("Salvando dados no arquivo: ")
-        print(" - {}".format(imageW))
-        f = open(imageW , 'wb')
-        f.write(rxBuffer)
+       
+        #print(" - {}".format(imageW))
+        #f = open(imageW , 'wb')
+        #f.write(rxBuffer)
 
-        f.close()
+        
         
 
         
