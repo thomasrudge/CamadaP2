@@ -23,101 +23,7 @@ import struct
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)  detectar sua porta e substituir aqui
-
-
-def main():
-    try:
-        print("Iniciou o main")
-
-        com1 = enlace(serialName)
-
-        com1.enable()
-
-        time.sleep(.2)
-
-        com1.sendData(b'00')
-
-        print("mandei")
-
-        time.sleep(1)
-
-        print("Abriu a comunicação")
-
-        pacotes = []
-
-        
-        pacote = datagrama(0 , 0 , 0)
-
-        pacote.monta_header()
-        pacote.monta_datagrama()
-
-        com1.sendData(pacote)
-
-
-
-
-
-       # txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
-       # bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
-        #com1.sendData(bytesBuffer)
-
-        print("meu array de bytes tem tamanho {}" .format(len(pacote)))
-
-
-        print("Transmissao vai comecar! ")
-
-        while com1.tx.threadMutex == True:
-            time.sleep(0.01)
-
-        txSize = com1.tx.getStatus()
-        print('enviou = {}' .format(txSize))
-
-
-
-
-        tempo_antes = time.time()
-        print("A recepcao vai comecar! ")
-
-
-        txLen = len(txBuffer)
-
-        tempo_antes = time.time()
-        rxBuffer = 0
-
-
-        recebido = False
-
-        while time.time() - tempo_antes < 5:
-            tam = com1.rx.getBufferLen()
-            if tam == 4:
-                recebido = True
-                break
-
-        if recebido == True:
-            rxBuffer, nRx = com1.getData(4)
-            print("recebeu {} bytes" .format(len(rxBuffer)))
-            rxBuffer = struct.unpack('<f',rxBuffer)[0]
-
-            print(rxBuffer)
-
-        else:
-            print("Nao recebi nada")
-
-
-        print("-------------------------")
-        print("Comunicação encerrada")
-        print("-------------------------")
-        com1.disable()
-
-    except Exception as erro:
-        print("ops! :-\\")
-        print(erro)
-        com1.disable()
-
-if __name__ == "__main__":
-    main()
-
+serialName = "COM3"  
 
 class datagrama:
     def __init__(self, tipo , info_payload , data , eop= b'\xFF\xFF\xFF'):
@@ -163,23 +69,175 @@ class datagrama:
         datagrama = header + self.data + self.eop
         return datagrama
 
-    def verificar_datagrama(self,datagrama, eop_esperado=b'\xFF\xFF\xFF'):
-        if len(datagrama) < 15:
-            return False, "Datagrama muito curto!"
 
-        header = datagrama[:12]
-        eop = datagrama[-3:]
 
-        if eop != eop_esperado:
-            return False, "EOP inválido!"
 
-        if header[5]+15 != len(datagrama):
-            return False
+def main():
+    try:
+        print("Iniciou o main")
 
-        if self.num_pacote - self.total_pacotes != 1:
-            return False, "Algum pacote foi perdido no meio do caminho"
-        else:
-            self.total_pacotes += 1
+        com1 = enlace(serialName)
 
-        return True, header
+        com1.enable()
+
+        time.sleep(.2)
+
+        com1.sendData(b'00')
+
+        print("mandei")
+
+        time.sleep(1)
+
+        print("Abriu a comunicação")
+
+        pacotes = []
+
+        
+        pacote = datagrama(0, 0, b"")
+
+        bytes_do_pacote = pacote.monta_datagrama()  # retorna um objeto 'bytes'
+
+        com1.sendData(bytes_do_pacote)              # agora sim, enviamos bytes
+
+        print("meu array de bytes tem tamanho {}".format(len(bytes_do_pacote)))
+
+
+
+
+        def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
+                print(len(header))
+
+                if len(header) != 12:
+                    print("Header Errado!")
+
+                tamanho_payload = header[5]
+
+                payload, _ = com1.getData(tamanho_payload)
+
+                print("Recebeu o payload")
+
+                eop, _ = com1.getData(3)
+
+               
+
+
+
+                if header[0] == 0:
+                    print("Handshake")
+
+                    recebido = datagrama(1, 0, b"")
+
+                    com1.sendData(recebido.monta_datagrama())
+
+                elif header[0] == 1:
+                    print("Resposta do servidor")
+
+                    recebido = datagrama(2, 13, b"oi, tudo bem?")
+
+                    com1.sendData(recebido.monta_datagrama())
+
+                elif header[0] == 2:
+                    print("Mensagem de Dados")
+
+                    recebido = datagrama(3, 13, b"")
+
+                    com1.sendData(recebido.monta_datagrama())
+
+                elif header[0] == 3:
+                    print("ACK (confirmação)")
+
+                    recebido = datagrama(4, 13, b"")
+
+                    com1.sendData(recebido.monta_datagrama())
+
+                elif header[0] == 4:
+                    print("Timeout")
+
+                    recebido = datagrama(5, 13, b"")
+
+                    com1.sendData(recebido.monta_datagrama())
+                    
+                elif header[0] == 5:
+                    print("Erro")
+
+
+
+                if eop != eop_esperado:
+                    print("EOP inválido!")
+
+                if header[4] - header[3] != 1:
+                    print("Número de pacote inválido!")
+
+                else:
+                    print("Recebeu o pacote")
+
+       # txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
+       # bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
+        #com1.sendData(bytesBuffer)
+
+       
+
+
+        print("Transmissao vai comecar! ")
+
+        while com1.tx.threadMutex == True:
+            time.sleep(0.01)
+
+        txSize = com1.tx.getStatus()
+        print('enviou = {}' .format(txSize))
+
+
+
+
+        tempo_antes = time.time()
+        print("A recepcao vai comecar! ")
+
+
+
+        for i in range(5):
+            header , _ = com1.getData(12)
+
+            verificar_datagrama(header)
+
+        
+
+
+       
+
+        #tempo_antes = time.time()
+        #rxBuffer = 0
+
+
+        #recebido = False
+
+        #while time.time() - tempo_antes < 5:
+         #   tam = com1.rx.getBufferLen()
+         #   if tam == 4:
+         #       recebido = True
+         #       break
+
+        #if recebido == True:
+        #    rxBuffer, nRx = com1.getData(4)
+        #    print("recebeu {} bytes" .format(len(rxBuffer)))
+        #    rxBuffer = struct.unpack('<f',rxBuffer)[0]
+
+         #   print(rxBuffer)
+
+        #else:
+        #    print("Nao recebi nada")
+
+
+        print("-------------------------")
+        print("Comunicação encerrada")
+        print("-------------------------")
+        com1.disable()
+
+    except Exception as erro:
+        print("ops! :-\\")
+        print(erro)
+        com1.disable()
+
+if __name__ == "__main__":
+    main()
+
 
