@@ -46,14 +46,23 @@ def main():
 
         pacotes = []
 
-        for i in range(3):
-            pacote - datagrama()
+        
+        pacote = datagrama(0 , 0 , 0)
 
-        txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
-        bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
-        com1.sendData(bytesBuffer)
+        pacote.monta_header()
+        pacote.monta_datagrama()
 
-        print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
+        com1.sendData(pacote)
+
+
+
+
+
+       # txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
+       # bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
+        #com1.sendData(bytesBuffer)
+
+        print("meu array de bytes tem tamanho {}" .format(len(pacote)))
 
 
         print("Transmissao vai comecar! ")
