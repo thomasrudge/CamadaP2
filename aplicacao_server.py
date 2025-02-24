@@ -24,83 +24,8 @@ import time
 
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
-serialName = "/dev/tty.usbmodem2101" # Mac    (variacao de)
+serialName = "/dev/cu.usbmodem2101" # Mac    (variacao de)
 #serialName = "COM3"                  # Windows(variacao de)  detectar sua porta e substituir aqui
-
-
-def main():
-    try:
-        print("Iniciou o main")
-
-        com1 = enlace(serialName)
-
-        com1.enable()
-
-        print("esperando 1 byte de sacrifício")
-        rxBuffer, nRx = com1.getData(1)
-        com1.rx.clearBuffer()
-        time.sleep(.1)
-
-        print("Abriu a comunicação")
-
-        def verificar_datagrama(self,datagrama, eop_esperado=b'\xFF\xFF\xFF'):
-            if len(datagrama) < 15:
-                return False, "Datagrama muito curto!"
-
-            header = datagrama[:12]
-            eop = datagrama[-3:]
-
-            if eop != eop_esperado:
-                return False, "EOP inválido!"
-
-            if header[5]+15 != len(datagrama):
-                return False
-
-            if self.num_pacote - self.total_pacotes != 1:
-                return False, "Algum pacote foi perdido no meio do caminho"
-            else:
-                self.total_pacotes += 1
-
-            return True, header
-
-        size = struct.unpack('<f', size)[0]
-
-        pacote, _ = com1.getData(com1.rx.getBufferLen())
-
-        verificar_datagrama(pacote)
-
-        print(size)
-
-        for i in range(int(size)):
-
-            numero, _ = com1.getData(4)
-
-            numero = struct.unpack('<f', numero)[0]
-
-            print(numero)
-
-            soma += numero
-
-
-        print(f"{soma:.6f}")
-
-        bytesBuffer = struct.pack("f", soma)
-        com1.sendData(bytesBuffer)
-
-
-        print("-------------------------")
-        print("Comunicação encerrada")
-        print("-------------------------")
-        com1.disable()
-
-    except Exception as erro:
-        print("ops! :-\\")
-        print(erro)
-        com1.disable()
-
-
-if __name__ == "__main__":
-    main()
 
 class datagrama:
     def __init__(self, tipo , info_payload , data , eop= b'\xFF\xFF\xFF'):
@@ -146,22 +71,98 @@ class datagrama:
         datagrama = header + self.data + self.eop
         return datagrama
 
-    def verificar_datagrama(self,datagrama, eop_esperado=b'\xFF\xFF\xFF'):
-        if len(datagrama) < 15:
-            return False, "Datagrama muito curto!"
 
-        header = datagrama[:12]
-        eop = datagrama[-3:]
+def main():
+    try:
+        print("Iniciou o main")
 
-        if eop != eop_esperado:
-            return False, "EOP inválido!"
+        com1 = enlace(serialName)
 
-        if header[5]+15 != len(datagrama):
-            return False
+        com1.enable()
 
-        if self.num_pacote - self.total_pacotes != 1:
-            return False, "Algum pacote foi perdido no meio do caminho"
-        else:
-            self.total_pacotes += 1
+        print("esperando 1 byte de sacrifício")
+        rxBuffer, nRx = com1.getData(1)
+        com1.rx.clearBuffer()
+        time.sleep(.1)
 
-        return True, header
+        print("Abriu a comunicação")
+
+        def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
+
+            if len(header) != 12:
+                print("Header Errado!")
+
+            tamanho_payload = header[5]
+
+            payload, _ = com1.getData(tamanho_payload)
+
+            eop, _ = com1.getData(3)
+
+            if header[0] == 0:
+                print("Handshake")
+
+                recebido = datagrama(1, 0, b"")
+
+                com1.sendData(recebido.monta_datagrama())
+
+            elif header[0] == 1:
+                print("Resposta do servidor")
+
+                recebido = datagrama(2, 13, b"oi, tudo bem?")
+
+                com1.sendData(recebido.monta_datagrama())
+
+            elif header[0] == 2:
+                print("Mensagem de Dados:")
+
+                print(payload)
+
+                recebido = datagrama(3, 13, b"")
+
+                com1.sendData(recebido.monta_datagrama())
+
+            elif header[0] == 3:
+                print("ACK (confirmação)")
+
+                recebido = datagrama(4, 13, b"")
+
+                com1.sendData(recebido.monta_datagrama())
+
+            elif header[0] == 4:
+                print("Timeout")
+
+                recebido = datagrama(5, 13, b"")
+
+                com1.sendData(recebido.monta_datagrama())
+
+            elif header[0] == 5:
+                print("Erro")
+                
+            if eop != eop_esperado:
+                print("EOP inválido!")
+
+            if header[4] - header[3] != 1:
+                print("Número de pacote inválido!")
+
+            else:
+                print("Recebeu o pacote!")
+                return header, payload, eop
+
+        for i in range(5):
+            header, _ = com1.getData(12)
+
+            verificar_datagrama(header)
+
+        print("-------------------------")
+        print("Comunicação encerrada")
+        print("-------------------------")
+        com1.disable()
+
+    except Exception as erro:
+        print("ops! :-\\")
+        print(erro)
+        com1.disable()
+
+
+if __name__ == "__main__":
+    main()
