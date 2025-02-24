@@ -87,20 +87,57 @@ def main():
 
         print("Abriu a comunicação")
 
+        def timeout():
+
+            tempo_antes = time.time()
+
+            while time.time() - tempo_antes < 5:
+                print(time.time() - tempo_antes)
+                tam = com1.rx.getBufferLen()
+                if tam != 0:
+                    print(tam)
+                    print("deu true")
+                    return True
+
+            return False
+        
+        def aguardar_dados(qtd_bytes, tempo_max=5):
+            tempo_inicial = time.time()
+            while time.time() - tempo_inicial < tempo_max:
+                if com1.rx.getBufferLen() == qtd_bytes:
+                    return True
+                time.sleep(0.01)
+            return False
+
         def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
+
+            # Começar quinta olhando o Chat "Erro de datagrama"
 
             if len(header) != 12:
                 print("Header Errado!")
 
+            recebido = timeout()
+
+            if recebido == False:
+                print("Erro de timeout")
+
             tamanho_payload = header[5]
 
-            payload, _ = com1.getData(tamanho_payload)
+            if aguardar_dados(tamanho_payload, 5):
+                payload, _ = com1.getData(tamanho_payload)
 
-            eop, _ = com1.getData(3)
+            else:
+                print("Erro de timeout no payload")
 
+            if aguardar_dados(3, 5):
+                eop, _ = com1.getData(3)
+
+            else:
+                print("Erro de timeout no eop")
+                
             if header[0] == 0:
                 print("Handshake")
-
+              
                 recebido = datagrama(1, 0, b"")
 
                 com1.sendData(recebido.monta_datagrama())
@@ -113,31 +150,29 @@ def main():
                 com1.sendData(recebido.monta_datagrama())
 
             elif header[0] == 2:
-                print("Mensagem de Dados:")
+                print("Mensagem de Dados")
 
-                print(payload)
-
-                recebido = datagrama(3, 13, b"")
+                recebido = datagrama(3, 0, b"")
 
                 com1.sendData(recebido.monta_datagrama())
 
             elif header[0] == 3:
                 print("ACK (confirmação)")
 
-                recebido = datagrama(4, 13, b"")
+                recebido = datagrama(4, 0, b"")
 
                 com1.sendData(recebido.monta_datagrama())
 
             elif header[0] == 4:
                 print("Timeout")
 
-                recebido = datagrama(5, 13, b"")
+                recebido = datagrama(5, 0, b"")
 
                 com1.sendData(recebido.monta_datagrama())
-
+            
             elif header[0] == 5:
                 print("Erro")
-                
+
             if eop != eop_esperado:
                 print("EOP inválido!")
 
