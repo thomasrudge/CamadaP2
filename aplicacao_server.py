@@ -24,7 +24,7 @@ import time
 
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
-serialName = "/dev/cu.usbmodem101" # Mac    (variacao de)
+serialName = "/dev/cu.usbmodem2101" # Mac    (variacao de)
 #serialName = "COM3"                  # Windows(variacao de)  detectar sua porta e substituir aqui
 
 class datagrama:
