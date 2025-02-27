@@ -102,74 +102,112 @@ def main():
         print("meu array de bytes tem tamanho {}".format(len(bytes_do_pacote)))
 
 
+        def timeout():
 
+            tempo_antes = time.time()
+
+            while time.time() - tempo_antes < 5:
+                print(time.time() - tempo_antes)
+                tam = com1.rx.getBufferLen()
+                if tam != 0:
+                    print(tam)
+                    print("deu true")
+                    return True
+
+            return False
 
         def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
-                print(len(header))
+                
+                erro = False
+
+                
 
                 if len(header) != 12:
                     print("Header Errado!")
-
-                tamanho_payload = header[5]
-
-                payload, _ = com1.getData(tamanho_payload)
-
-                print("Recebeu o payload")
-
-                eop, _ = com1.getData(3)
-
-               
+                    erro = True
 
 
+                if header[5] == (com1.rx.getBufferLen()-3):
 
-                if header[0] == 0:
-                    print("Handshake")
+                    tamanho_payload = header[5]
 
-                    recebido = datagrama(1, 0, b"")
+                    payload, _ = com1.getData(tamanho_payload)
 
-                    com1.sendData(recebido.monta_datagrama())
+                    print("Recebeu o payload")
 
-                elif header[0] == 1:
-                    print("Resposta do servidor")
+                    eop, _ = com1.getData(3)
+                else:
+                    print("Tamanho do payload errado")
+                    erro= True
+                    eop = None
 
-                    recebido = datagrama(2, 13, b"oi, tudo bem?")
-
-                    com1.sendData(recebido.monta_datagrama())
-
-                elif header[0] == 2:
-                    print("Mensagem de Dados")
-
-                    recebido = datagrama(3, 13, b"")
-
-                    com1.sendData(recebido.monta_datagrama())
-
-                elif header[0] == 3:
-                    print("ACK (confirmação)")
-
-                    recebido = datagrama(4, 13, b"")
-
-                    com1.sendData(recebido.monta_datagrama())
-
-                elif header[0] == 4:
-                    print("Timeout")
-
-                    recebido = datagrama(5, 13, b"")
-
-                    com1.sendData(recebido.monta_datagrama())
-                    
-                elif header[0] == 5:
-                    print("Erro")
-
-
-
-                if eop != eop_esperado:
+                
+                if eop != eop_esperado and erro==False:
                     print("EOP inválido!")
+                    erro = True
 
                 if header[4] - header[3] != 1:
                     print("Número de pacote inválido!")
+                    erro = True
 
-                else:
+                if erro==False:
                     print("Recebeu o pacote")
+
+
+
+               
+
+             
+
+
+            
+                if erro == False:
+
+
+                    if header[0] == 0:
+                        print("Tipo de mensagem: Handshake")
+
+                        recebido = datagrama(1, 0, b"")
+
+                        com1.sendData(recebido.monta_datagrama())
+
+                    
+
+                    elif header[0] == 1:
+                        print("Tipo de mensagem: Resposta do servidor")
+
+                        recebido = datagrama(2, 13, b"oi, tudo bem?")
+
+                        com1.sendData(recebido.monta_datagrama())
+
+                
+                    elif header[0] == 2:
+                        print("Tipo de mensagem: Mensagem de Dados")
+
+                        recebido = datagrama(3, 0, b"")
+
+                        com1.sendData(recebido.monta_datagrama())
+
+                    elif header[0] == 3:
+                        print("Tipo de mensagem: ACK (confirmação)")
+
+                        recebido = datagrama(4, 0, b"")
+
+                        com1.sendData(recebido.monta_datagrama())
+
+                    elif header[0] == 4:
+                        print("Tipo de mensagem: Timeout")
+
+                        recebido = datagrama(5, 0, b"")
+
+                        com1.sendData(recebido.monta_datagrama())
+                        
+                    elif header[0] == 5:
+                        print("Tipo de mensagem: Erro")
+
+
+
+                
 
        # txBuffer = [6, 16.010101,10.131313,24.151515 , 16.939393 , 10.000001 , 32.141414]
        # bytesBuffer = b"".join(struct.pack("f", valor) for valor in txBuffer)
