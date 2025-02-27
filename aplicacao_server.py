@@ -1,56 +1,22 @@
-#####################################################
-# Camada Física da Computação
-#Carareto
-#11/08/2022
-#Aplicação
-####################################################
-
-
-#esta é a camada superior, de aplicação do seu software de comunicação serial UART.
-#para acompanhar a execução e identificar erros, construa prints ao longo do código!
-
-
 from enlace import *
 from enlaceRx import *
 import time
-import numpy as np
 import struct
-import time
 
-# voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
-#   para saber a sua porta, execute no terminal :
-#   python -m serial.tools.list_ports
-# se estiver usando windows, o gerenciador de dispositivos informa a porta
-
-#use uma das 3 opcoes para atribuir à variável a porta usada
-#serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
-serialName = "/dev/cu.usbmodem2101" # Mac    (variacao de)
-#serialName = "COM3"                  # Windows(variacao de)  detectar sua porta e substituir aqui
+serialName = "/dev/cu.usbmodem1101"
 
 class datagrama:
-    def __init__(self, tipo , info_payload , data , eop= b'\xFF\xFF\xFF'):
-
-        self.tipo=tipo                               # Handshake, Resposta do servidor, Mensagem de Dados, ACK (confirmação), Timeout, Erro
-        self.total_pacotes=0                         # Total de pacotes recebidos
-        self.num_pacote=0                            # Número do pacote
-        self.info_payload=info_payload               # Tamanho do payload
-        self.data=data                               # Payload
-        self.eop=eop
-
-        self.h1=0
-        self.h2=0
-        self.h6=0
-        self.h7=0
-        self.h8=0
-        self.h9=0
-        self.h10=0
-        self.h11=0
-
+    def __init__(self, tipo, info_payload, data, eop=b'\xFF\xFF\xFF'):
+        self.tipo = tipo
+        self.total_pacotes = 0
+        self.num_pacote = 0
+        self.info_payload = info_payload
+        self.data = data
+        self.eop = eop
+        self.h1 = self.h2 = self.h6 = self.h7 = self.h8 = self.h9 = self.h10 = self.h11 = 0
 
     def monta_header(self):
-
         header = bytearray(12)
-
         header[0] = self.tipo
         header[1] = self.h1
         header[2] = self.h2
@@ -63,141 +29,119 @@ class datagrama:
         header[9] = self.h9
         header[10] = self.h10
         header[11] = self.h11
-
         return bytes(header)
 
     def monta_datagrama(self):
-        header = self.monta_header()
-        datagrama = header + self.data + self.eop
-        return datagrama
+        return self.monta_header() + self.data + self.eop
 
+erro_ocorrido = False
 
 def main():
+    global erro_ocorrido
     try:
         print("Iniciou o main")
-
         com1 = enlace(serialName)
-
         com1.enable()
-
-        print("esperando 1 byte de sacrifício")
-        rxBuffer, nRx = com1.getData(1)
+        com1.getData(1)
         com1.rx.clearBuffer()
-        time.sleep(.1)
-
+        time.sleep(0.1)
         print("Abriu a comunicação")
 
-        def timeout():
-
-            tempo_antes = time.time()
-
-            while time.time() - tempo_antes < 5:
-                print(time.time() - tempo_antes)
-                tam = com1.rx.getBufferLen()
-                if tam != 0:
-                    print(tam)
-                    print("deu true")
-                    return True
-
-            return False
-        
-        def aguardar_dados(qtd_bytes, tempo_max=5):
-            tempo_inicial = time.time()
-            while time.time() - tempo_inicial < tempo_max:
-                if com1.rx.getBufferLen() == qtd_bytes:
+        def aguardar_dados(qtd, tempo_max=5):
+            inicio = time.time()
+            while time.time() - inicio < tempo_max:
+                if com1.rx.getBufferLen() >= qtd:
                     return True
                 time.sleep(0.01)
             return False
 
-        def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
+        def tipo_pacote(h, payload, eop, eop_esp=b'\xFF\xFF\xFF'):
+            if h[4] - h[3] != 1 or eop != eop_esp:
+                print("Número de pacote ou EOP inválido!")
+                return None
+            if h[0] == 0:
+                print("Handshake recebido")
 
-            # Começar quinta olhando o Chat "Erro de datagrama"
-
-            if len(header) != 12:
-                print("Header Errado!")
-
-            recebido = timeout()
-
-            if recebido == False:
-                print("Erro de timeout")
-
-            tamanho_payload = header[5]
-
-            if aguardar_dados(tamanho_payload, 5):
-                payload, _ = com1.getData(tamanho_payload)
-
-            else:
-                print("Erro de timeout no payload")
-
-            if aguardar_dados(3, 5):
-                eop, _ = com1.getData(3)
-
-            else:
-                print("Erro de timeout no eop")
+                if h[5] != 0:
+                    print("Inconsistência no handshake!")
+                    return None
                 
-            if header[0] == 0:
-                print("Handshake")
-              
-                recebido = datagrama(1, 0, b"")
-
-                com1.sendData(recebido.monta_datagrama())
-
-            elif header[0] == 1:
-                print("Resposta do servidor")
-
-                recebido = datagrama(2, 13, b"oi, tudo bem?")
-
-                com1.sendData(recebido.monta_datagrama())
-
-            elif header[0] == 2:
-                print("Mensagem de Dados")
-
-                recebido = datagrama(3, 0, b"")
-
-                com1.sendData(recebido.monta_datagrama())
-
-            elif header[0] == 3:
-                print("ACK (confirmação)")
-
-                recebido = datagrama(4, 0, b"")
-
-                com1.sendData(recebido.monta_datagrama())
-
-            elif header[0] == 4:
-                print("Timeout")
-
-                recebido = datagrama(5, 0, b"")
-
-                com1.sendData(recebido.monta_datagrama())
+                return datagrama(1, 0, b"")
             
-            elif header[0] == 5:
-                print("Erro")
+            elif h[0] == 1:
+                print("Resposta do servidor recebida")
+                return datagrama(2, 13, b"oi, tudo bem?")
+            elif h[0] == 2:
+                print("Mensagem de Dados recebida")
 
-            if eop != eop_esperado:
-                print("EOP inválido!")
+                if len(payload) != h[5]:
+                    print("Erro: tamanho do payload incorreto")
+                    return None
+                
+                return datagrama(3, 0, b"")
+            
+            elif h[0] == 3:
+                print("ACK recebido")
 
-            if header[4] - header[3] != 1:
-                print("Número de pacote inválido!")
+                return datagrama(4, 0, b"")
+            
+            elif h[0] == 4:
+                print("Timeout recebido")
 
+                return datagrama(5, 0, b"")
+            
             else:
-                print("Recebeu o pacote!")
-                return header, payload, eop
+                print("Tipo de pacote desconhecido ou erro")
+                return None
 
-        for i in range(5):
+        def verificar_datagrama(h, eop_esp=b'\xFF\xFF\xFF'):
+            global erro_ocorrido
+            if len(h) != 12:
+                print("Header Errado!")
+                erro_ocorrido = True
+                return None
+            
+            tam = h[5]
+
+            if not aguardar_dados(tam, 5):
+                print("Erro de timeout no payload")
+                erro_ocorrido = True
+                return None
+            payload, _ = com1.getData(tam) if tam > 0 else (b"", 0)
+            if not aguardar_dados(3, 5):
+                print("Erro de timeout no eop")
+                erro_ocorrido = True
+                return None
+            eop, _ = com1.getData(3)
+            resp = tipo_pacote(h, payload, eop, eop_esp)
+            if resp is None:
+                print("Inconsistência detectada. Abortando comunicação.")
+                erro_ocorrido = True
+                return None
+            com1.sendData(resp.monta_datagrama())
+            return h, payload, eop
+
+        for _ in range(3):
+            if erro_ocorrido:
+                break
+
+            if not aguardar_dados(12, 5):
+                print("Timeout na leitura do header")
+                erro_ocorrido = True
+                break
+
             header, _ = com1.getData(12)
-
-            verificar_datagrama(header)
+            
+            if verificar_datagrama(header) is None:
+                print("Abortando comunicação devido a inconsistência.")
+                break
 
         print("-------------------------")
         print("Comunicação encerrada")
-        print("-------------------------")
         com1.disable()
-
-    except Exception as erro:
-        print("ops! :-\\")
-        print(erro)
+    except Exception as e:
+        print("ops! :-\\", e)
         com1.disable()
-
 
 if __name__ == "__main__":
     main()
