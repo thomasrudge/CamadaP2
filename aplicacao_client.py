@@ -102,21 +102,17 @@ def main():
         print("meu array de bytes tem tamanho {}".format(len(bytes_do_pacote)))
 
 
-        def timeout():
-
-            tempo_antes = time.time()
-
-            while time.time() - tempo_antes < 5:
-                print(time.time() - tempo_antes)
-                tam = com1.rx.getBufferLen()
-                if tam != 0:
-                    print(tam)
-                    print("deu true")
+        def aguardar_dados(qtd, tempo_max=5):
+            inicio = time.time()
+            while time.time() - inicio < tempo_max:
+                if com1.rx.getBufferLen() >= qtd:
                     return True
-
+                time.sleep(0.01)
             return False
 
         def verificar_datagrama(header, eop_esperado=b'\xFF\xFF\xFF'):
+                
+                print("entrou na funcao vd")
                 
                 erro = False
 
@@ -125,6 +121,15 @@ def main():
                 if len(header) != 12:
                     print("Header Errado!")
                     erro = True
+
+
+                to = aguardar_dados(0 , 5)
+
+                print(to)
+                if to == False:
+                    erro=True
+                    print("erro de timeout")
+
 
 
                 if header[5] == (com1.rx.getBufferLen()-3):
@@ -153,14 +158,8 @@ def main():
                 if erro==False:
                     print("Recebeu o pacote")
 
-
-
                
 
-             
-
-
-            
                 if erro == False:
 
 
@@ -232,7 +231,11 @@ def main():
 
 
 
-        for i in range(5):
+        for i in range(4):
+
+            if not aguardar_dados(12,5):
+                print("Timeout na leitura do header")
+                break
             header , _ = com1.getData(12)
 
             verificar_datagrama(header)
