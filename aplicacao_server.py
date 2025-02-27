@@ -37,7 +37,9 @@ class datagrama:
 erro_ocorrido = False
 
 def main():
+
     global erro_ocorrido
+
     try:
         print("Iniciou o main")
         com1 = enlace(serialName)
@@ -49,16 +51,20 @@ def main():
 
         def aguardar_dados(qtd, tempo_max=5):
             inicio = time.time()
+
             while time.time() - inicio < tempo_max:
                 if com1.rx.getBufferLen() >= qtd:
                     return True
+                
                 time.sleep(0.01)
+
             return False
 
         def tipo_pacote(h, payload, eop, eop_esp=b'\xFF\xFF\xFF'):
             if h[4] - h[3] != 1 or eop != eop_esp:
                 print("Número de pacote ou EOP inválido!")
                 return None
+            
             if h[0] == 0:
                 print("Handshake recebido")
 
@@ -71,6 +77,7 @@ def main():
             elif h[0] == 1:
                 print("Resposta do servidor recebida")
                 return datagrama(2, 13, b"oi, tudo bem?")
+            
             elif h[0] == 2:
                 print("Mensagem de Dados recebida")
 
@@ -107,18 +114,23 @@ def main():
                 print("Erro de timeout no payload")
                 erro_ocorrido = True
                 return None
+            
             payload, _ = com1.getData(tam) if tam > 0 else (b"", 0)
             if not aguardar_dados(3, 5):
                 print("Erro de timeout no eop")
                 erro_ocorrido = True
                 return None
+            
             eop, _ = com1.getData(3)
             resp = tipo_pacote(h, payload, eop, eop_esp)
+
             if resp is None:
                 print("Inconsistência detectada. Abortando comunicação.")
                 erro_ocorrido = True
                 return None
-            com1.sendData(resp.monta_datagrama())
+            
+            #com1.sendData(resp.monta_datagrama())
+
             return h, payload, eop
 
         for _ in range(3):
