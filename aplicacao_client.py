@@ -30,7 +30,7 @@ class datagrama:
 
         self.tipo=tipo                               # Handshake, Resposta do servidor, Mensagem de Dados, ACK (confirmação), Timeout, Erro
         self.total_pacotes=0                         # Total de pacotes recebidos
-        self.num_pacote=0                            # Número do pacote
+        self.num_pacote=0                        # Número do pacote
         self.info_payload=info_payload               # Tamanho do payload
         self.data=data                               # Payload
         self.eop=eop
@@ -177,6 +177,8 @@ def main():
 
                         recebido = datagrama(2, 13, b"oi, tudo bem?")
 
+
+
                         com1.sendData(recebido.monta_datagrama())
 
                 
@@ -230,8 +232,9 @@ def main():
         print("A recepcao vai comecar! ")
 
 
+        for i in range(3):
 
-        for i in range(4):
+            
 
             if not aguardar_dados(12,5):
                 print("Timeout na leitura do header")
@@ -280,5 +283,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
