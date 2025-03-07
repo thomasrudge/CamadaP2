@@ -74,6 +74,7 @@ def main():
                 
                 return datagrama(1, 0, b"")
             
+            # Não usado no server
             elif h[0] == 1:
                 print("Resposta do servidor recebida")
                 return datagrama(2, 13, b"oi, tudo bem?")
@@ -87,6 +88,7 @@ def main():
                 
                 return datagrama(3, 0, b"")
             
+            # Não usado no server
             elif h[0] == 3:
                 print("ACK recebido")
 
@@ -129,7 +131,7 @@ def main():
                 erro_ocorrido = True
                 return None
             
-            #com1.sendData(resp.monta_datagrama())
+            com1.sendData(resp.monta_datagrama())
 
             return h, payload, eop
 
@@ -151,6 +153,7 @@ def main():
         print("-------------------------")
         print("Comunicação encerrada")
         com1.disable()
+
     except Exception as e:
         print("ops! :-\\", e)
         com1.disable()
