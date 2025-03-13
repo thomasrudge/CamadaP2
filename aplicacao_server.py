@@ -2,8 +2,9 @@ from enlace import *
 from enlaceRx import *
 import time
 import struct
+import random
 
-serialName = "/dev/cu.usbmodem1101"
+serialName = "/dev/cu.usbmodem2101"
 
 class datagrama:
     def __init__(self, tipo, info_payload, data, eop=b'\xFF\xFF\xFF'):
@@ -38,6 +39,27 @@ erro_ocorrido = False
 
 def main():
 
+    mensagens = {
+        0: ["Handshake", "Handshake recebido", "Inconsistência no handshake!", datagrama(0, 0, b"")],
+        1: ["Resposta do Servidor", "Resposta do servidor recebida", "Inconsistência na resposta do servidor!", datagrama(1, 8, b"Recebido")],
+        2: ["Mensagem de Dados", "Mensagem de Dados recebida", "Inconsistência na mensagem de dados!", datagrama(2, 13, b"oi, tudo bem?")],
+        3: ["ACK", "ACK recebido", "Inconsistência no ACK!", datagrama(3, 0, b"")],
+        4: ["Timeout", "Timeout recebido", "Inconsistência no Timeout!", datagrama(4, 0, b"")],
+        5: ["Erro", "Erro recebido", "Inconsistência no Erro!", datagrama(5, 0, b"")]
+    }
+    
+    pacotes = {
+        1: datagrama(1, 1, b"1"),
+        2: datagrama(1, 1, b"2"),
+        3: datagrama(1, 1, b"3"),
+        4: datagrama(1, 1, b"4"),
+        5: datagrama(1, 1, b"5"),
+        6: datagrama(1, 1, b"6"),
+        7: datagrama(1, 1, b"7"),
+        8: datagrama(1, 1, b"8"),
+        9: datagrama(1, 1, b"9"),
+    }
+
     global erro_ocorrido
 
     try:
@@ -48,6 +70,17 @@ def main():
         com1.rx.clearBuffer()
         time.sleep(0.1)
         print("Abriu a comunicação")
+
+        def registrar_log(direcao, header, payload):
+            timestamp = time.strftime("%d/%m/%Y %H:%M:%S")
+            tipo_msg = header[0]
+            total_bytes = len(header) + len(payload) + 3
+            pacote_num = header[4]
+            total_pacotes = header[3]
+            crc_val = int.from_bytes(header[10:12], 'big')
+            line = f"{timestamp} / {direcao} / {tipo_msg} / {total_bytes} / {pacote_num} / {total_pacotes} / {crc_val:04X}\n"
+            with open("log_server.txt", "a") as f:
+                f.write(line)
 
         def aguardar_dados(qtd, tempo_max=5):
             inicio = time.time()
@@ -64,60 +97,35 @@ def main():
             if h[4] - h[3] != 1 or eop != eop_esp:
                 print("Número de pacote ou EOP inválido!")
                 return None
-            
-            if h[0] == 0:
-                print("Handshake recebido")
 
-                if h[5] != 0:
-                    print("Inconsistência no handshake!")
-                    return None
-                
-                return datagrama(1, 0, b"")
-            
-            # Não usado no server
-            elif h[0] == 1:
-                print("Resposta do servidor recebida")
-                return datagrama(2, 13, b"oi, tudo bem?")
-            
-            elif h[0] == 2:
-                print("Mensagem de Dados recebida")
+            print(f'Recebi um {mensagens[h[0]][0]} com sucesso!')
 
-                if len(payload) != h[5]:
-                    print("Erro: tamanho do payload incorreto")
-                    return None
-                
-                return datagrama(3, 0, b"")
-            
-            # Não usado no server
-            elif h[0] == 3:
-                print("ACK recebido")
+            if h[0] != 0:
+                print(f"{payload}")
 
-                return datagrama(4, 0, b"")
-            
-            elif h[0] == 4:
-                print("Timeout recebido")
+            registrar_log("Recebido", h, payload)
 
-                return datagrama(5, 0, b"")
-            
-            else:
-                print("Tipo de pacote desconhecido ou erro")
+            if len(payload) != h[5]:
+                print("Erro: tamanho do payload incorreto")
                 return None
+
+            return pacotes[random.randint(1, 9)]
 
         def verificar_datagrama(h, eop_esp=b'\xFF\xFF\xFF'):
             global erro_ocorrido
+
             if len(h) != 12:
                 print("Header Errado!")
                 erro_ocorrido = True
                 return None
             
-            tam = h[5]
-
-            if not aguardar_dados(tam, 5):
+            if not aguardar_dados(h[5], 5):
                 print("Erro de timeout no payload")
                 erro_ocorrido = True
                 return None
             
-            payload, _ = com1.getData(tam) if tam > 0 else (b"", 0)
+            payload, _ = com1.getData(h[5]) if h[5] > 0 else (b"", 0)
+
             if not aguardar_dados(3, 5):
                 print("Erro de timeout no eop")
                 erro_ocorrido = True
@@ -135,7 +143,7 @@ def main():
 
             return h, payload, eop
 
-        for _ in range(3):
+        for _ in range(6):
             if erro_ocorrido:
                 break
 
