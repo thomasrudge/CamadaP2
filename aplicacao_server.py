@@ -3,8 +3,10 @@ from enlaceRx import *
 import time
 import struct
 import random
+import binascii
 
 serialName = "/dev/cu.usbmodem2101"
+serialName = "COM3"
 
 class datagrama:
     def __init__(self, tipo, info_payload, data, eop=b'\xFF\xFF\xFF'):
@@ -22,7 +24,7 @@ class datagrama:
         header[1] = self.h1
         header[2] = self.h2
         header[3] = self.total_pacotes
-        header[4] = self.num_pacote + 1
+        header[4] = self.num_pacote + 2
         header[5] = self.info_payload
         header[6] = self.h6
         header[7] = self.h7
@@ -110,6 +112,14 @@ def main():
                 return None
 
             return pacotes[random.randint(1, 9)]
+        
+        def calcular_crc(data: bytes) -> int:
+              
+            crc = binascii.crc_hqx(data, 0)
+            byte1 = (crc >> 8) & 0xFF
+            byte2 = crc & 0xFF
+
+            return byte1 , byte2
 
         def verificar_datagrama(h, eop_esp=b'\xFF\xFF\xFF'):
             global erro_ocorrido
@@ -126,6 +136,20 @@ def main():
             
             payload, _ = com1.getData(h[5]) if h[5] > 0 else (b"", 0)
 
+            print(f'Payload : {payload}')
+
+            crc1, crc2 = calcular_crc(payload)
+
+            if crc1 != h[10] and crc2 != h[11]:
+                print("erro ao ler o CRC")
+                return None
+
+            
+
+
+
+
+
             if not aguardar_dados(3, 5):
                 print("Erro de timeout no eop")
                 erro_ocorrido = True
@@ -140,10 +164,11 @@ def main():
                 return None
             
             com1.sendData(resp.monta_datagrama())
+            registrar_log("Enviado" , resp.monta_header(), resp.data)
 
             return h, payload, eop
 
-        for _ in range(6):
+        for _ in range(11):
             if erro_ocorrido:
                 break
 
@@ -153,6 +178,8 @@ def main():
                 break
 
             header, _ = com1.getData(12)
+
+            print(f'CRC calculado: {header[10]} & {header[11]} ')
             
             if verificar_datagrama(header) is None:
                 print("Abortando comunicação devido a inconsistência.")
