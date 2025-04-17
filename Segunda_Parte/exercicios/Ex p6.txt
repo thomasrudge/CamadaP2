@@ -1,0 +1,28 @@
+Digitalizacao.pdf
+
+1) Sao 44100 amostras/s,
+3600s
+2 canais
+16bits por amostra
+
+entao para gravar um audio de 1hr e necessario 
+
+
+(44100*3600*2*16)/8 == 635 MB
+
+1) O ECG dura 300s
+sao 1000 amostras por segundo, 300 000 amostras total
+sao 14 bits por amostra, 4 200 000 bits total
+O baudrate e 1000bps, porem como o overhead e de 10%, considera-se que e 900
+4 200 000 / 900 = 4666,67 segundos 
+aproximadamente 1 hora e 18 minutos
+
+2) os bits todos estao em uma faixa de 100mV, -50mV ate 50mV
+a resolucao desejada 10*10^-6 V 
+100*10^-3 / (10*10^-6) = 10 000
+LogBase2 (10 000) = 13,29 ; 14 bits
+
+3) Ts = 25 * 10^-6
+f = 1/Ts = 40 000
+esta acima da frequencia limite
+entao ouviriamos 4400
