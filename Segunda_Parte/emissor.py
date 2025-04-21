@@ -14,7 +14,7 @@ CHORDS = {
 }
 
 FS = 44100  # taxa de amostragem (Hz)
-DURATION = 3.0  # duração da emissão (segundos)
+DURATION = 5.0  # duração da emissão (segundos)
 
 
 def plot_fft(sinal, fs, title_suffix=""):
