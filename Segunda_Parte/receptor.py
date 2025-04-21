@@ -3,7 +3,9 @@ import sounddevice as sd
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 
-# dicionário de acordes (mesmo do emissor)
+FS = 44100       # taxa de amostragem do receptor (Hz)
+DURATION = 3.0   # duração de gravação (s)
+
 CHORDS = {
     'Do maior':       [523.25, 659.25, 783.99],
     'Re menor':       [587.33, 698.46, 880.00],
@@ -13,10 +15,6 @@ CHORDS = {
     'La menor':       [880.00, 1046.50, 1318.51],
     'Si bemol menor': [493.88, 587.33, 698.46]
 }
-
-FS = 44100       # taxa de amostragem do receptor (Hz)
-DURATION = 3.0   # duração de gravação (s)
-
 
 def plot_fft(sinal, fs, title_suffix=""):
     """
@@ -31,10 +29,12 @@ def plot_fft(sinal, fs, title_suffix=""):
     plt.xlabel("Frequência (Hz)")
     plt.ylabel("Magnitude")
     plt.xlim(0, 2000)
+    plt.axhline(y=100, color='red', linestyle='-')
     plt.grid(True)
     plt.tight_layout()
     plt.show()
 
+    return fft_vals , freqs
 
 def receiver():
     # capta sinal pelo microfone
@@ -60,38 +60,56 @@ def receiver():
     plt.tight_layout()
     plt.show()
 
-    # FFT e detecção de picos
-    N = len(signal)
-    fft_vals = np.abs(np.fft.fft(signal))[:N//2]
-    freqs = np.fft.fftfreq(N, d=1/FS)[:N//2]
+    # plot da FFT
+    fft_vals , freqs = plot_fft(signal, FS, title_suffix="(recebido)")
+    
 
-    # pede sensibilidade até achar mínimo de 5 picos
-    height_factor = 0.5
-    peaks, props = find_peaks(fft_vals, height=np.max(fft_vals)*height_factor, distance=20)
-    while len(peaks) < 5 and height_factor > 0.1:
-        height_factor -= 0.1
-        peaks, props = find_peaks(fft_vals, height=np.max(fft_vals)*height_factor, distance=20)
+    peak_freqs=[]
+    indice=1
+    while len(peak_freqs)< 5:
 
-    peak_freqs = freqs[peaks]
-    peak_mags = props['peak_heights']
-    print("Frequências detectadas:", np.round(peak_freqs,1))
+        peaks, properties = find_peaks(fft_vals, height=100*indice)  
+        peak_freqs = freqs[peaks]
+        indice -= 0.1
+  
+    #print("peak_freqs", peak_freqs)
 
-    # plot FFT recebido
-    plot_fft(signal, FS, title_suffix="(recebido)")
+    peak_freaqs_filt = []
 
-    # identificação de acorde
-    identified = None
-    for name, freqs_ref in CHORDS.items():
-        matches = sum(any(abs(f - ref) < 10 for f in peak_freqs) for ref in freqs_ref)
-        if matches == 3:
-            identified = name
+    for vnf in peak_freqs:
+        add = True
+        for vf in peak_freaqs_filt:
+            if len(peak_freaqs_filt) != 0 :
+                if (vnf > vf-20) and (vnf < vf+20):
+                    add=False
+            if vnf < 300:
+                add=False
+                
+        if add==True and vnf > 300:
+            peak_freaqs_filt.append(vnf)
+
+    #print("peak_freqs_filt", peak_freaqs_filt)
+
+
+
+    
+    for acorde2, refs in CHORDS.items():
+        count = sum(
+            any(abs(fr - ref) < 30 for fr in peak_freaqs_filt)
+            for ref in refs
+        )
+        if count == 3:
+            acorde_detectado = acorde2
             break
 
-    if identified:
-        print(f"Acorde identificado: {identified}")
-    else:
-        print("Não foi possível identificar o acorde com certeza.")
+    print("peak_freaqs_filt" , peak_freaqs_filt)
+    print("Acorde detectado foi: ",acorde_detectado)
+    
+        
 
+        
+# peaks é um array de índices onde há picos
+# properties['peak_heights'] contém as alturas dos picos
 
 if __name__ == '__main__':
     receiver()
