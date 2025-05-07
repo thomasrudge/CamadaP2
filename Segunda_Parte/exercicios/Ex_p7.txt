@@ -1,0 +1,40 @@
+Ex2)
+
+10 * log(1e-12 / 1e-12) = 10 * 0 = 0 db
+
+10 * log(1 / 1e-12) = 10*12 = 120 db
+
+Ex3) 
+
+20 * log(0.5) = -6.02
+
+Ex4a) 
+
+-20 e 0
+
+Ex4b)
+
+aprox 1e3,4
+
+Ex5)
+O código abaixo (filtro passa faixa.ipynb) fornecido via BB fornece a função de transferência discreta (𝐺𝑍) de um
+filtro digital passa faixa. O filtro foi calculado para passar apenas frequências próximas de 2 kHz (frequência central).
+Além disso o código também faz diagrama de Bode do filtro. Rode o código e altere o valor do parâmetro Q
+(chamado fator de qualidade). Descreva como esse parâmetro atua.
+
+O parametro Q afeta o ganho maximo de um som depois de que um filtro passa baixa e aplicado.
+
+O parametro afeta a funcao do sinal filtrado (saida)
+
+
+Ex6)
+O código abaixo (filtr0_notch.ipynb) fornecido via BB fornece a função de transferência discreta (𝐺𝑍) de um filtro
+digital rejeita faixa. O filtro foi calculado para rejeitar frequências próximas de 2 kHz (frequência central). Além disso
+o código também faz diagrama de Bode do filtro. Rode o código e altere o valor do parâmetro Q (chamado fator de
+qualidade). Descreva como esse parâmetro atua. Altere a frequência central. Você consegue pensar em alguma
+utilidade para o filtro
+
+
+Quanto maior o fator de qualidade, menor a amplitude de Gz, porem fica mais proximo de 1. Tambem, os valores da amplitude tem menos variacao, Podems ver isso no grafico olhando o pico, que fica cada vez mais fino
+
+
