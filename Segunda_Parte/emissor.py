@@ -1,7 +1,6 @@
 import numpy as np
 import sounddevice as sd
 import matplotlib.pyplot as plt
-
 # dicionário de acordes: nome → lista de 3 frequências (Hz)
 CHORDS = {
     'Do maior':       [523.25, 659.25, 783.99],

@@ -5,10 +5,8 @@ from scipy.io import wavfile
 import sounddevice as sd
 
 
-
-
 frequencias = [20, 32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000, 20000]
-ganhos_exemplo = [-10, 10, -4, -6, -8, -6, -4, -2, 0, 2, 4, 6]
+ganhos_exemplo = [10, 10, 10, 10, 10, 10, -10, -10, -10, -10, -10, -10]
 
 def peaking_eq(f0, gain_db, Q, fs):
     """
@@ -53,7 +51,7 @@ def plot_filter_response(b, a, fs, title="Filter Response"):
 fs = 44100         # Sampling rate (Hz)
 f0 = 1000          # Center frequency (Hz)
        # Gain in dB
-Q = 1.0 
+Q = 5
 
 while True:
     print("Atualmente, a lista de ganhos esta assim: \n " \
@@ -124,7 +122,7 @@ def bode_plot(parametros, fs):
     plt.xlabel('Frequência (Hz)')
     plt.ylabel('Ganho (dB)')
     plt.xlim([20, fs / 2])
-    plt.ylim([-60, 60])
+    plt.ylim([-12, 12])
     plt.grid(which='both', linestyle='--')
     plt.show()
 
